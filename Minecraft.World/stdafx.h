@@ -86,7 +86,9 @@ typedef XUID GameSessionUID;
 #else
 #include <unordered_map>
 #include <unordered_set>
+#ifdef _MSC_VER
 #include <sal.h>
+#endif
 #include <vector>
 #endif //__PS3__
 
