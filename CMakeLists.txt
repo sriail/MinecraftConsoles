@@ -43,6 +43,21 @@ if(MSVC)
   configure_msvc_target(MinecraftWorld)
 endif()
 
+# Emscripten / WASM: define __PSVITA__ so code follows PS Vita paths (shimmed at
+# the C boundary), and prepend the SDK stub headers before any other include dirs
+# so they shadow the real (unavailable) Vita SDK system headers.
+if(EMSCRIPTEN OR VITA_WASM)
+  target_compile_definitions(MinecraftWorld PRIVATE __PSVITA__ __psp2__)
+  target_include_directories(MinecraftWorld BEFORE PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/WASM/vita_sdk_stubs"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/PSVitaExtras"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/inc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/Network"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client"
+  )
+endif()
+
 add_executable(MinecraftClient ${MINECRAFT_CLIENT_SOURCES})
 target_include_directories(MinecraftClient PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client"
@@ -61,18 +76,30 @@ if(MSVC)
   )
 endif()
 
+# Emscripten / WASM: define __PSVITA__ and prepend SDK stub headers
+if(EMSCRIPTEN OR VITA_WASM)
+  target_compile_definitions(MinecraftClient PRIVATE __PSVITA__ __psp2__)
+  target_include_directories(MinecraftClient BEFORE PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/WASM/vita_sdk_stubs"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/PSVitaExtras"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/inc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/Network"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita"
+  )
+endif()
+
 set_target_properties(MinecraftClient PROPERTIES
   VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:MinecraftClient>"
 )
 
 target_link_libraries(MinecraftClient PRIVATE
   MinecraftWorld
-  $<$<CONFIG:Debug>:
+  $<$<AND:$<NOT:$<BOOL:${EMSCRIPTEN}>>,$<NOT:$<BOOL:${VITA_WASM}>>,$<CONFIG:Debug>>:
     "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Input_d.lib"
     "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Storage_d.lib"
     "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Render_PSVita_d.lib"
   >
-  $<$<NOT:$<CONFIG:Debug>>:
+  $<$<AND:$<NOT:$<BOOL:${EMSCRIPTEN}>>,$<NOT:$<BOOL:${VITA_WASM}>>,$<NOT:$<CONFIG:Debug>>>:
     "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Input.lib"
     "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Storage.lib"
     "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Render_PSVita.lib"

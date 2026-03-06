@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "UI.h"
 #include "UIScene_SettingsGraphicsMenu.h"
-#include "..\..\Minecraft.h"
-#include "..\..\GameRenderer.h"
+#include "../../Minecraft.h"
+#include "../../GameRenderer.h"
 
 namespace
 {

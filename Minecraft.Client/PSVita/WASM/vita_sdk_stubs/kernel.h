@@ -14,6 +14,12 @@ typedef struct SceKernelLwMutexOptParam { SceSize size; } SceKernelLwMutexOptPar
 
 #define SCE_KERNEL_LW_MUTEX_ATTR_RECURSIVE 0x02
 
+/* _SCE_BREAK / SCE_BREAK - on the real Vita SDK these halt the debugger.
+   In the WASM build they are no-ops (no hardware debugger). */
+#ifndef _SCE_BREAK
+#define _SCE_BREAK() ((void)0)
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
