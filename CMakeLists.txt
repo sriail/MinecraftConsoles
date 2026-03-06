@@ -22,6 +22,11 @@ endfunction()
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/WorldSources.cmake")
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ClientSources.cmake")
 
+# WASM / Emscripten shim layer (opt-in via -DVITA_WASM=ON or emcmake detection)
+if(EMSCRIPTEN OR VITA_WASM)
+  include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/vita_wasm.cmake")
+endif()
+
 list(TRANSFORM MINECRAFT_WORLD_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.World/")
 list(TRANSFORM MINECRAFT_CLIENT_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/")
 
@@ -106,3 +111,8 @@ else()
 endif()
 
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT MinecraftClient)
+
+# Apply WASM shim layer when building for Emscripten
+if(EMSCRIPTEN OR VITA_WASM)
+  vita_wasm_link(MinecraftClient)
+endif()
