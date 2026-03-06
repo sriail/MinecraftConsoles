@@ -1,46 +1,38 @@
-# Compile Instructions
+# Compile Instructions — PS Vita Edition
 
-## Visual Studio (`.sln`)
+This repository contains the **PS Vita** edition of Minecraft: Console Edition (LCE).
 
-1. Open `MinecraftConsoles.sln` in Visual Studio 2022.
-2. Set `Minecraft.Client` as the Startup Project.
-3. Select configuration:
-   - `Debug` (recommended), or
-   - `Release`
-4. Select platform: `Windows64`.
-5. Build and run:
-   - `Build > Build Solution` (or `Ctrl+Shift+B`)
-   - Start debugging with `F5`.
+## Prerequisites
 
-## CMake (Windows x64)
+- [VitaSDK](https://vitasdk.org/) toolchain installed and on your `PATH`
+- CMake 3.24 or newer
+- A PS Vita development unit or a Vita3K emulator build for testing
 
-Configure (use your VS Community instance explicitly):
+## CMake (VitaSDK)
 
-```powershell
-cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_GENERATOR_INSTANCE="C:/Program Files/Microsoft Visual Studio/2022/Community"
+Configure with the VitaSDK toolchain:
+
+```sh
+cmake -S . -B build \
+  -DCMAKE_TOOLCHAIN_FILE=$VITASDK/share/vita.toolchain.cmake
 ```
 
 Build Debug:
 
-```powershell
+```sh
 cmake --build build --config Debug --target MinecraftClient
 ```
 
 Build Release:
 
-```powershell
+```sh
 cmake --build build --config Release --target MinecraftClient
 ```
 
-Run executable:
+## Notes
 
-```powershell
-cd .\build\Debug
-.\MinecraftClient.exe
-```
-
-Notes:
-- The CMake build is Windows-only and x64-only.
-- Contributors on macOS or Linux need a Windows machine or VM to build the project. Running the game via Wine is separate from having a supported build environment.
-- Post-build asset copy is automatic for `MinecraftClient` in CMake (Debug and Release variants).
-- The game relies on relative paths (for example `Common\Media\...`), so launching from the output directory is required.
+- Building requires the PSP2 (VitaSDK) toolchain. The PS Vita uses an ARM Cortex-A9 CPU.
+- PS Vita system libraries (`SceGxm`, `SceNet`, etc.) must be available through the VitaSDK sysroot.
+- Media assets are located in `Minecraft.Client/PSVitaMedia/`.
+- PS Vita system metadata (trophy data, livearea, param.sfo) is in `Minecraft.Client/sce_sys/`.
+- Trophy data is in `Minecraft.Client/TROPDIR/`.
