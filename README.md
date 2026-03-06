@@ -109,6 +109,102 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Debug --target MinecraftClient
 ```
 
+### WebAssembly / Browser (Emscripten)
+
+The PS Vita port can be compiled to WebAssembly and run in a browser using [Emscripten](https://emscripten.org/).
+
+**Prerequisites**
+
+| Tool | Minimum Version | Notes |
+|---|---|---|
+| [Emscripten SDK (emsdk)](https://emscripten.org/docs/getting_started/downloads.html) | 3.1.50+ | Provides `emcc`, `emcmake`, `emmake` |
+| CMake | 3.24+ | Standard CMake installation |
+| Python 3 | 3.8+ | Required by emsdk |
+| A modern browser | Chrome 92+ / Firefox 90+ | Requires `SharedArrayBuffer` support (COOP/COEP headers) |
+
+**1. Install and activate Emscripten**
+
+```sh
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk
+./emsdk install latest
+./emsdk activate latest
+source ./emsdk_env.sh   # Linux / macOS
+# On Windows (PowerShell): .\emsdk_env.ps1
+```
+
+**2. Clone the repository and configure**
+
+```sh
+git clone https://github.com/sriail/MinecraftConsoles.git
+cd MinecraftConsoles
+
+emcmake cmake -S . -B build-wasm \
+    -DCMAKE_BUILD_TYPE=Release
+```
+
+> `emcmake` automatically sets `CMAKE_TOOLCHAIN_FILE` to the Emscripten toolchain and sets the `EMSCRIPTEN` variable, which triggers the WASM shim layer automatically.
+
+**3. Build**
+
+```sh
+emmake cmake --build build-wasm --target MinecraftClient
+```
+
+The output files will be in `build-wasm/`:
+- `MinecraftClient.wasm` — the compiled game
+- `MinecraftClient.js` — the Emscripten JS loader
+- `MinecraftClient.html` — a minimal test shell (auto-generated)
+
+**4. Serve locally**
+
+WebAssembly with `SharedArrayBuffer` (pthreads) requires specific HTTP headers. Use any server that sets them:
+
+```sh
+# Using Python's built-in server (add COOP/COEP headers with a small wrapper)
+pip install "simple-coop-server"
+simple-coop-server build-wasm --port 8080
+
+# Or using Node.js / npx
+npx serve build-wasm \
+  --header "Cross-Origin-Opener-Policy: same-origin" \
+  --header "Cross-Origin-Embedder-Policy: require-corp"
+```
+
+Then open `http://localhost:8080/MinecraftClient.html` in your browser.
+
+**5. Optional CMake flags**
+
+| Flag | Default | Description |
+|---|---|---|
+| `-DVITA_WASM_PTHREADS=OFF` | ON | Disable pthreads (single-threaded build, no `SharedArrayBuffer` required) |
+| `-DVITA_WASM_ASYNCIFY=OFF` | ON | Disable Asyncify (faster compile, but sync-blocking shims will not work correctly) |
+| `-DVITA_WASM_ES_MODULE=ON` | OFF | Emit an ES module wrapper instead of a classic script |
+
+Example — single-threaded build (no COOP/COEP headers needed):
+
+```sh
+emcmake cmake -S . -B build-wasm-st \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DVITA_WASM_PTHREADS=OFF
+
+emmake cmake --build build-wasm-st --target MinecraftClient
+```
+
+**WASM shim layer overview**
+
+The WASM build uses a shim layer under `Minecraft.Client/PSVita/WASM/` to bridge proprietary Vita SDK calls to browser APIs:
+
+| Vita SDK | Browser equivalent |
+|---|---|
+| `SceKernel` threads, mutexes, semaphores | Emscripten pthreads |
+| `SceDisplay` 960×544 framebuffer | HTML `<canvas>` / Canvas 2D |
+| `SceCtrl` controller input | W3C Gamepad API |
+| `SceAudio` PCM 48kHz/16-bit | Web Audio API (`ScriptProcessorNode`) |
+| `SceNet` BSD sockets (TCP) | `WebSocket` |
+| `SceIoFileMgr` (`app0:`, `savedata0:`, `ux0:`) | Emscripten FS (IDBFS) |
+| `SceGxm` GPU / draw calls | WebGL 2.0 (fallback WebGL 1) |
+
 For more information, see [COMPILE.md](COMPILE.md).
 
 ## Known Issues
