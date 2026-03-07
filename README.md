@@ -109,6 +109,60 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Debug --target MinecraftClient
 ```
 
+### WebAssembly (Browser) — PS Vita Edition
+
+Play Minecraft PS Vita Edition in any modern browser using Emscripten. The build uses
+lightweight PS Vita SDK shims located in `Minecraft.Client/PSVita/WASM/` so no Sony SDK
+is required.
+
+**Prerequisites**
+
+| Tool | Version | Install |
+|------|---------|---------|
+| [Emscripten SDK (emsdk)](https://emscripten.org/docs/getting_started/downloads.html) | 3.1.50 + | `git clone https://github.com/emscripten-core/emsdk && cd emsdk && ./emsdk install latest && ./emsdk activate latest` |
+| CMake | 3.24 + | [cmake.org](https://cmake.org/download/) |
+| Python 3 | any | needed for the local dev server |
+
+**Build steps**
+
+```bash
+# 1 — Activate Emscripten (do this in every new shell session)
+source /path/to/emsdk/emsdk_env.sh          # Linux / macOS
+# .\emsdk\emsdk_env.bat                      # Windows (cmd)
+# .\emsdk\emsdk_env.ps1                      # Windows (PowerShell)
+
+# 2 — Configure
+emcmake cmake -S . -B build-wasm \
+  -DCMAKE_BUILD_TYPE=Release
+
+# Optional: customise memory (default 256 MB heap, 8 MB stack)
+# emcmake cmake -S . -B build-wasm \
+#   -DCMAKE_BUILD_TYPE=Release \
+#   -DWASM_INITIAL_MEMORY_MB=512 \
+#   -DWASM_STACK_SIZE_MB=16
+
+# 3 — Build  (outputs MinecraftClient.html / .js / .wasm in build-wasm/)
+cmake --build build-wasm --target MinecraftClient -j$(nproc)
+```
+
+**Run in browser**
+
+Because browsers block `file://` access to WebAssembly, you must serve the output
+over HTTP:
+
+```bash
+# Python 3 built-in server (simplest)
+cd build-wasm
+python3 -m http.server 8080
+```
+
+Then open **http://localhost:8080/MinecraftClient.html** in Chrome, Firefox, or Safari.
+
+> **Tip — loading assets**: the game reads assets relative to its working directory.
+> Copy (or symlink) the `Minecraft.Client/PSVita/` media folders into `build-wasm/`
+> before launching the server, or use Emscripten's `--preload-file` linker flag to
+> embed them in the WASM bundle at build time.
+
 For more information, see [COMPILE.md](COMPILE.md).
 
 ## Known Issues
