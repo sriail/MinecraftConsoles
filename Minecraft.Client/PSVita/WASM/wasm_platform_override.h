@@ -55,6 +55,9 @@
 #endif
 
 #ifndef SCE_BREAK
+/* Note: _SCE_BREAK/_SCE_MACRO_BEGIN/_SCE_MACRO_END use reserved-style names to
+ * match the existing PSVitaStubs.h convention; they are guarded by #ifndef so
+ * PSVitaStubs.h definitions take precedence if that header is included first. */
 #define _SCE_BREAK() __builtin_trap()
 #define SCE_BREAK()  _SCE_BREAK()
 #endif

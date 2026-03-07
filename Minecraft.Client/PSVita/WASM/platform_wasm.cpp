@@ -79,8 +79,12 @@ extern "C" void OutputDebugStringW(const wchar_t *str)
 /* ── Sleep ───────────────────────────────────────────────────── */
 extern "C" void Sleep(unsigned int ms)
 {
-    /* emscripten_sleep requires ASYNCIFY; use a busy-wait
-     * approximation when not available. */
+    /* sceKernelDelayThread calls are already no-ops in the stubs.
+     * On WASM, emscripten_sleep() requires ASYNCIFY which is not enabled
+     * by default.  Callers that spin-sleep are expected to be infrequent
+     * (only in shutdown / sync paths) and will simply execute without the
+     * delay in the browser. Enable ASYNCIFY in CMakeLists.txt if true
+     * cooperative yielding becomes necessary. */
     (void)ms;
 }
 
@@ -197,7 +201,10 @@ extern "C" {
 }
 
 /* ── TLS ─────────────────────────────────────────────────────── */
-/* Single-slot TLS using a static array (adequate for WASM single-thread) */
+/* Single-slot TLS using a static array.
+ * WASM is inherently single-threaded (without SharedArrayBuffer + Atomics),
+ * so one global array of 256 slots is sufficient.  If more slots are ever
+ * needed, increase WASM_TLS_MAX_SLOTS and recompile. */
 #define WASM_TLS_MAX_SLOTS 256
 
 static void *g_tlsSlots[WASM_TLS_MAX_SLOTS];

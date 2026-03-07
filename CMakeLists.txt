@@ -36,6 +36,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/WASM/vita_sdk_stubs"
   )
 
+  # Emscripten heap and stack sizes (configurable via -DWASM_INITIAL_MEMORY_MB=256)
+  set(WASM_INITIAL_MEMORY_MB 256 CACHE STRING "Emscripten initial heap size in MB")
+  set(WASM_STACK_SIZE_MB      8  CACHE STRING "Emscripten stack size in MB")
+  math(EXPR WASM_INITIAL_MEMORY "${WASM_INITIAL_MEMORY_MB} * 1024 * 1024")
+  math(EXPR WASM_STACK_SIZE     "${WASM_STACK_SIZE_MB}     * 1024 * 1024")
+
   # All PSVita include paths needed for Emscripten
   set(VITA_WASM_INCLUDE_DIRS
     "${VITA_WASM_STUB_DIR}"
@@ -110,8 +116,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
   # Emscripten linker flags: generate HTML + JS + WASM, enable file system access
   target_link_options(MinecraftClient PRIVATE
     "-sALLOW_MEMORY_GROWTH=1"
-    "-sINITIAL_MEMORY=268435456"  # 256 MB initial heap
-    "-sSTACK_SIZE=8388608"        # 8 MB stack
+    "-sINITIAL_MEMORY=${WASM_INITIAL_MEMORY}"
+    "-sSTACK_SIZE=${WASM_STACK_SIZE}"
     "-sFORCE_FILESYSTEM=1"
     "-sEXPORTED_RUNTIME_METHODS=[\"ccall\",\"cwrap\",\"FS\"]"
     "--bind"
