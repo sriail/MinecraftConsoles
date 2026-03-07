@@ -25,14 +25,41 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ClientSources.cmake")
 list(TRANSFORM MINECRAFT_WORLD_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.World/")
 list(TRANSFORM MINECRAFT_CLIENT_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/")
 
+# Detect platform and set appropriate defines
+if(EMSCRIPTEN)
+    # WASM/Emscripten build
+    set(PLATFORM_DEFINES _LARGE_WORLDS;_DEBUG_MENUS_ENABLED;_LIB;_CRT_NON_CONFORMING_SWPRINTFS;_CRT_SECURE_NO_WARNINGS;__EMSCRIPTEN__)
+    set(PLATFORM_INCLUDES
+        "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/WASM/vita_sdk_stubs"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/PSVitaExtras"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/inc"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/Network"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita"
+    )
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Generic" OR VITA_TOOLCHAIN)
+    # PSVita build
+    set(PLATFORM_DEFINES _LARGE_WORLDS;_DEBUG_MENUS_ENABLED;_LIB;_CRT_NON_CONFORMING_SWPRINTFS;_CRT_SECURE_NO_WARNINGS;_PSVita;__PSVITA__;__psp2__)
+    set(PLATFORM_INCLUDES
+        "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/PSVitaExtras"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/inc"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/Network"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita"
+    )
+else()
+    # Other platforms (Windows, etc.)
+    set(PLATFORM_DEFINES _LARGE_WORLDS;_DEBUG_MENUS_ENABLED;_LIB;_CRT_NON_CONFORMING_SWPRINTFS;_CRT_SECURE_NO_WARNINGS)
+    set(PLATFORM_INCLUDES "")
+endif()
+
 add_library(MinecraftWorld STATIC ${MINECRAFT_WORLD_SOURCES})
 target_include_directories(MinecraftWorld PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.World"
   "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.World/x64headers"
+  ${PLATFORM_INCLUDES}
 )
 target_compile_definitions(MinecraftWorld PRIVATE
-  $<$<CONFIG:Debug>:_LARGE_WORLDS;_DEBUG_MENUS_ENABLED;_DEBUG;_LIB;_CRT_NON_CONFORMING_SWPRINTFS;_CRT_SECURE_NO_WARNINGS;_PSVita>
-  $<$<NOT:$<CONFIG:Debug>>:_LARGE_WORLDS;_DEBUG_MENUS_ENABLED;_LIB;_CRT_NON_CONFORMING_SWPRINTFS;_CRT_SECURE_NO_WARNINGS;_PSVita>
+  $<$<CONFIG:Debug>:${PLATFORM_DEFINES};_DEBUG>
+  $<$<NOT:$<CONFIG:Debug>>:${PLATFORM_DEFINES}>
 )
 if(MSVC)
   configure_msvc_target(MinecraftWorld)
@@ -44,10 +71,11 @@ target_include_directories(MinecraftClient PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/Iggy/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/Sentient"
   "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.World/x64headers"
+  ${PLATFORM_INCLUDES}
 )
 target_compile_definitions(MinecraftClient PRIVATE
-  $<$<CONFIG:Debug>:_LARGE_WORLDS;_DEBUG_MENUS_ENABLED;_DEBUG;_CRT_NON_CONFORMING_SWPRINTFS;_CRT_SECURE_NO_WARNINGS;_PSVita>
-  $<$<NOT:$<CONFIG:Debug>>:_LARGE_WORLDS;_DEBUG_MENUS_ENABLED;_CRT_NON_CONFORMING_SWPRINTFS;_CRT_SECURE_NO_WARNINGS;_PSVita>
+  $<$<CONFIG:Debug>:${PLATFORM_DEFINES};_DEBUG>
+  $<$<NOT:$<CONFIG:Debug>>:${PLATFORM_DEFINES}>
 )
 if(MSVC)
   configure_msvc_target(MinecraftClient)
@@ -56,53 +84,9 @@ if(MSVC)
   )
 endif()
 
-set_target_properties(MinecraftClient PROPERTIES
-  VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:MinecraftClient>"
+target_link_libraries(MinecraftClient MinecraftWorld)
+
+set_target_properties(MinecraftClient MinecraftWorld PROPERTIES
+  CXX_STANDARD 11
+  CXX_STANDARD_REQUIRED ON
 )
-
-target_link_libraries(MinecraftClient PRIVATE
-  MinecraftWorld
-  $<$<CONFIG:Debug>:
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Input_d.lib"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Storage_d.lib"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Render_PSVita_d.lib"
-  >
-  $<$<NOT:$<CONFIG:Debug>>:
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Input.lib"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Storage.lib"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Render_PSVita.lib"
-  >
-)
-
-if(CMAKE_HOST_WIN32)
-  message(STATUS "Starting asset copy...")
-  execute_process(
-    COMMAND robocopy.exe
-            "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client"
-            "${CMAKE_CURRENT_BINARY_DIR}"
-            /S /MT /R:0 /W:0 /NP
-            /XF "*.cpp" "*.c" "*.h" "*.hpp" "*.asm"
-                "*.xml" "*.lang" "*.vcxproj" "*.vcxproj.*" "*.sln"
-                "*.docx" "*.xls"
-                "*.bat" "*.cmd" "*.ps1" "*.py"
-                "*Test*"
-            /XD "Durango*" "Orbis*" "PS3*" "PS4*" "PS3_GAME" "PS4_GAME" "Xbox" "Windows64*"
-  )
-elseif(CMAKE_HOST_UNIX)
-  message(STATUS "Starting asset copy...")
-  execute_process(
-    COMMAND rsync -av
-            "--exclude=*.cpp" "--exclude=*.c" "--exclude=*.h" "--exclude=*.hpp" "--exclude=*.asm"
-            "--exclude=*.xml" "--exclude=*.lang" "--exclude=*.vcxproj" "--exclude=*.vcxproj.*" "--exclude=*.sln"
-            "--exclude=*.docx" "--exclude=*.xls"
-            "--exclude=*.bat" "--exclude=*.cmd" "--exclude=*.ps1" "--exclude=*.py"
-            "--exclude=*Test*"
-            "--exclude=Durango*" "--exclude=Orbis*" "--exclude=PS3*" "--exclude=PS4*"
-            "--exclude=PS3_GAME" "--exclude=PS4_GAME" "--exclude=Xbox" "--exclude=Windows64*"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/" "${CMAKE_CURRENT_BINARY_DIR}/"
-  )
-else()
-  message(FATAL_ERROR "Asset copying is only supported on Windows (Robocopy) and Unix systems (rsync).")
-endif()
-
-set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT MinecraftClient)
