@@ -21,6 +21,8 @@ typedef struct SceTouchData {
     SceTouchReport report[SCE_TOUCH_MAX_REPORT];
 } SceTouchData;
 
+typedef SceTouchData ScePadTouchData;
+
 typedef struct SceTouchPanelInfo {
     int16_t minAaX, minAaY, maxAaX, maxAaY;
     int16_t minDispX, minDispY, maxDispX, maxDispY;

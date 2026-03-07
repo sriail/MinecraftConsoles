@@ -27,3 +27,13 @@ typedef struct SceCtrlData {
     uint8_t  ry;
     uint8_t  reserved[16];
 } SceCtrlData;
+
+typedef struct SceCtrlData2 {
+    uint64_t timeStamp;
+    uint32_t buttons;
+    uint8_t  lx;
+    uint8_t  ly;
+    uint8_t  rx;
+    uint8_t  ry;
+    uint8_t  reserved[16];
+} SceCtrlData2;
