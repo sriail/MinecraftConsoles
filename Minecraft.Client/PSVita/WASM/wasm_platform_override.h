@@ -77,6 +77,12 @@
       "[WASM stub] %s not implemented\n", __FUNCTION__); } }
 #endif
 
+/* ── Windows-style type definitions ───────────────────────────── */
+/* Include PSVitaTypes.h for DWORD, ULONGLONG, HANDLE, FILETIME, etc.
+ * PSVitaTypes.h uses #pragma once so it won't conflict when stdafx.h
+ * includes it again later.                                           */
+#include "../PSVitaExtras/PSVitaTypes.h"
+
 /* ── Prevent inclusion of real Sony SDK headers ──────────────── */
 /* The vita_sdk_stubs directory is prepended to the include path so
  * <kernel.h>, <gxm.h>, etc. resolve to the stub versions.         */

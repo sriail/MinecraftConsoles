@@ -48,6 +48,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/PSVitaExtras"
     "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/inc"
     "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/Network"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita"
   )
 
   # Force-include the platform override header before every translation unit
