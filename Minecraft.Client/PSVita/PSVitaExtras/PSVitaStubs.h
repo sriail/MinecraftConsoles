@@ -458,9 +458,13 @@ BOOL FindNextFileA(HANDLE hFindFile, LPWIN32_FIND_DATAA lpFindFileData);
 #define FindClose(hFindFile) CloseHandle(hFindFile)
 
 #ifdef _CONTENT_PACKAGE
+#ifndef PSVITA_STUBBED
 #define PSVITA_STUBBED { }
+#endif
 #else
+#ifndef PSVITA_STUBBED
 #define PSVITA_STUBBED { static bool bSet = false; if(!bSet){printf("missing function on PSVita : %s\n Tell MarkH about this, then press f5 to continue.\n", __FUNCTION__); bSet = true; SCE_BREAK();} }
+#endif
 #endif
 
 DWORD XGetLanguage();
