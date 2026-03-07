@@ -5,6 +5,11 @@ project(MinecraftConsoles LANGUAGES C CXX)
 # PS Vita builds require the PSP2 (VitaSDK) toolchain.
 # Pass -DCMAKE_TOOLCHAIN_FILE=/path/to/vita.toolchain.cmake when configuring.
 # See: https://github.com/vitasdk/vita-toolchain
+#
+# Emscripten/WASM builds use the bundled vita_sdk_stubs and the PSVita code
+# path. Configure with:
+#   emcmake cmake -S . -B build-wasm
+#   emmake cmake --build build-wasm --target MinecraftClient
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
@@ -38,6 +43,21 @@ if(MSVC)
   configure_msvc_target(MinecraftWorld)
 endif()
 
+# Emscripten/WASM PSVita build: add vita_sdk_stubs and PSVita include paths,
+# and define the PSVita platform macros required by stdafx.h / extraX64.h.
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  set(VITA_WASM_INCLUDE_DIRS
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/WASM/vita_sdk_stubs"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/PSVitaExtras"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/inc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/Network"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client"
+  )
+  target_include_directories(MinecraftWorld PRIVATE ${VITA_WASM_INCLUDE_DIRS})
+  target_compile_definitions(MinecraftWorld PRIVATE __PSVITA__ __psp2__)
+endif()
+
 add_executable(MinecraftClient ${MINECRAFT_CLIENT_SOURCES})
 target_include_directories(MinecraftClient PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client"
@@ -56,23 +76,34 @@ if(MSVC)
   )
 endif()
 
+# Emscripten/WASM PSVita build: add extra include paths, defines, and skip
+# the pre-built .lib files that are only available for Windows/MSVC.
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  target_include_directories(MinecraftClient PRIVATE ${VITA_WASM_INCLUDE_DIRS})
+  target_compile_definitions(MinecraftClient PRIVATE __PSVITA__ __psp2__)
+endif()
+
 set_target_properties(MinecraftClient PROPERTIES
   VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:MinecraftClient>"
 )
 
-target_link_libraries(MinecraftClient PRIVATE
-  MinecraftWorld
-  $<$<CONFIG:Debug>:
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Input_d.lib"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Storage_d.lib"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Render_PSVita_d.lib"
-  >
-  $<$<NOT:$<CONFIG:Debug>>:
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Input.lib"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Storage.lib"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Render_PSVita.lib"
-  >
-)
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  target_link_libraries(MinecraftClient PRIVATE MinecraftWorld)
+else()
+  target_link_libraries(MinecraftClient PRIVATE
+    MinecraftWorld
+    $<$<CONFIG:Debug>:
+      "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Input_d.lib"
+      "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Storage_d.lib"
+      "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Render_PSVita_d.lib"
+    >
+    $<$<NOT:$<CONFIG:Debug>>:
+      "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Input.lib"
+      "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Storage.lib"
+      "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Render_PSVita.lib"
+    >
+  )
+endif()
 
 if(CMAKE_HOST_WIN32)
   message(STATUS "Starting asset copy...")
