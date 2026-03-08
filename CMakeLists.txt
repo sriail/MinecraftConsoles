@@ -43,6 +43,7 @@ target_include_directories(MinecraftClient PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client"
   "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/Iggy/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/Sentient"
+  "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/Web"
   "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.World/x64headers"
 )
 target_compile_definitions(MinecraftClient PRIVATE
@@ -60,19 +61,47 @@ set_target_properties(MinecraftClient PROPERTIES
   VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:MinecraftClient>"
 )
 
-target_link_libraries(MinecraftClient PRIVATE
-  MinecraftWorld
-  $<$<CONFIG:Debug>:
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Input_d.lib"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Storage_d.lib"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Render_PSVita_d.lib"
-  >
-  $<$<NOT:$<CONFIG:Debug>>:
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Input.lib"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Storage.lib"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Render_PSVita.lib"
-  >
-)
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  # Emscripten/WASM builds: define PSVita macros for code path compatibility,
+  # add vita_sdk_stubs and Web include paths, skip native .lib linking
+  set(VITA_WASM_INCLUDE_DIRS
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/WASM/vita_sdk_stubs"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/PSVitaExtras"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/PSVitaExtras/4JLibs"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/PSVitaExtras/4JLibs/Network"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/Web"
+  )
+  target_include_directories(MinecraftWorld PRIVATE ${VITA_WASM_INCLUDE_DIRS})
+  target_include_directories(MinecraftClient PRIVATE ${VITA_WASM_INCLUDE_DIRS})
+  target_compile_definitions(MinecraftWorld PRIVATE __PSVITA__ __psp2__)
+  target_compile_definitions(MinecraftClient PRIVATE __PSVITA__ __psp2__)
+
+  target_link_libraries(MinecraftClient PRIVATE MinecraftWorld)
+  target_link_options(MinecraftClient PRIVATE
+    "SHELL:-s USE_WEBGL2=1"
+    "SHELL:-s FULL_ES3=1"
+    "SHELL:-s ALLOW_MEMORY_GROWTH=1"
+    "SHELL:-s INITIAL_MEMORY=268435456"
+    "SHELL:-s WASM=1"
+    "SHELL:-s ASYNCIFY"
+    "SHELL:-s EXPORTED_RUNTIME_METHODS=['ccall','cwrap']"
+  )
+  set_target_properties(MinecraftClient PROPERTIES SUFFIX ".html")
+else()
+  target_link_libraries(MinecraftClient PRIVATE
+    MinecraftWorld
+    $<$<CONFIG:Debug>:
+      "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Input_d.lib"
+      "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Storage_d.lib"
+      "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Render_PSVita_d.lib"
+    >
+    $<$<NOT:$<CONFIG:Debug>>:
+      "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Input.lib"
+      "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Storage.lib"
+      "${CMAKE_CURRENT_SOURCE_DIR}/Minecraft.Client/PSVita/4JLibs/libs/4J_Render_PSVita.lib"
+    >
+  )
+endif()
 
 if(CMAKE_HOST_WIN32)
   message(STATUS "Starting asset copy...")

@@ -502,6 +502,8 @@ set(MINECRAFT_CLIENT_SOURCES
   "ZombieRenderer.cpp"
   "compat_shims.cpp"
   "glWrapper.cpp"
+  "Web/WebGLRenderer.cpp"
+  "Web/WebAudio.cpp"
   "stdafx.cpp"
   "stubs.cpp"
 )
