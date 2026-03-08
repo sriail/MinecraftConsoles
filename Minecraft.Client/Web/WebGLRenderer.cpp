@@ -493,9 +493,10 @@ void WebGLMatrixStack::Mat4Multiply(float* out, const float* a, const float* b)
 void WebGLMatrixStack::Mat4Translate(float* out, float x, float y, float z)
 {
     Mat4Identity(out);
-    out[3] = x;
-    out[7] = y;
-    out[11] = z;
+    // Column-major order: translation in column 3 (indices 12, 13, 14)
+    out[12] = x;
+    out[13] = y;
+    out[14] = z;
 }
 
 void WebGLMatrixStack::Mat4Rotate(float* out, float angleRad, float x, float y, float z)
@@ -546,24 +547,26 @@ void WebGLMatrixStack::Mat4Scale(float* out, float x, float y, float z)
 
 void WebGLMatrixStack::Mat4Perspective(float* out, float fovy, float aspect, float zNear, float zFar)
 {
-    float f = 1.0f / tanf(fovy * 3.14159265f / 360.0f);
+    float f = 1.0f / tanf(fovy * static_cast<float>(M_PI) / 360.0f);
     memset(out, 0, 16 * sizeof(float));
+    // Column-major order
     out[0] = f / aspect;
     out[5] = f;
     out[10] = (zFar + zNear) / (zNear - zFar);
-    out[11] = (2.0f * zFar * zNear) / (zNear - zFar);
-    out[14] = -1.0f;
+    out[11] = -1.0f;
+    out[14] = (2.0f * zFar * zNear) / (zNear - zFar);
 }
 
 void WebGLMatrixStack::Mat4Ortho(float* out, float left, float right, float bottom, float top, float zNear, float zFar)
 {
     memset(out, 0, 16 * sizeof(float));
+    // Column-major order: translation components in column 3 (indices 12, 13, 14)
     out[0] = 2.0f / (right - left);
-    out[3] = -(right + left) / (right - left);
     out[5] = 2.0f / (top - bottom);
-    out[7] = -(top + bottom) / (top - bottom);
     out[10] = -2.0f / (zFar - zNear);
-    out[11] = -(zFar + zNear) / (zFar - zNear);
+    out[12] = -(right + left) / (right - left);
+    out[13] = -(top + bottom) / (top - bottom);
+    out[14] = -(zFar + zNear) / (zFar - zNear);
     out[15] = 1.0f;
 }
 

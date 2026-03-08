@@ -126,6 +126,8 @@ void WebAudioEngine::LoadSound(const char* path, int soundId)
             });
     }, path, soundId);
 
+    // Note: m_soundLoaded tracks that loading was initiated;
+    // actual buffer availability is asynchronous and checked in JS via audioBuffers[id]
     m_soundLoaded[soundId] = true;
 }
 
@@ -251,11 +253,13 @@ void WebAudioEngine::PlayMusic(const char* path, float volume, bool loop)
         // Use HTML5 Audio element for streaming music (more efficient for large files)
         var audio = new Audio(path);
         audio.loop = doLoop ? true : false;
-        audio.volume = volume;
+        // Volume controlled exclusively through gain node chain; set element to 1.0
+        audio.volume = 1.0;
 
         // Connect to Web Audio API for gain control
         var source = audioContext.createMediaElementSource(audio);
         source.connect(window.musicGain);
+        window.musicGain.gain.value = volume;
 
         window.currentMusic = audio;
         window.currentMusicSource = source;
